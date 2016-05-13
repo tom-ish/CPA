@@ -1,0 +1,625 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage[francais]{babel}
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or epsÂ§ with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex		
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+% Gestion des marges
+\usepackage[a4paper]{geometry}
+
+\geometry{vscale=0.855,centering}
+
+\newcommand{\mathbbm}[1]{\text{\usefont{U}{bbm}{m}{n}#1}}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{lem}[thm]{Lemma}
+
+%SetFonts
+
+%SetFonts
+
+
+\title{Projet de Conception Pratique Algorithmique 2016}
+\author{Tomohiro ISHIWATA}
+\date\today
+
+\begin{document}
+\maketitle
+
+\newpage
+\begin{flushleft}
+\begin{center}
+\textbf{\LARGE Calculer le cercle couvrant minimum d'un ensemble de points}\\
+\end{center}
+\vspace{2cm}
+\textbf{Résumé:} Etant donné un ensemble fini $\mathcal{P}$ de points de $\mathbb{R}^d$, le cercle couvrant minimum de $\mathcal{P}$ est le cercle minimum qui contient tous les points de $\mathcal{P}$.\\
+On propose deux algorithmes pour calculer le cercle minimum d'un ensemble fini de points.\\
+Le premier est un algorithme naïf, qui s'avère efficace dans le seul cas où on trouve le cercle minimum avec 2 points, mais extrêmement lent dès lors où il faut calculer le cercle circonscrit entre 3 points distincts.\\
+Le deuxième est l'algorithme de Welzl, qui possède l'énorme avantage d'avoir une complexité linéaire dans tous les cas.\\
+
+\vspace{2cm}
+\textbf{Mots-clés:} Géométrie algorithmique, cercle minimum
+
+\end{flushleft}
+\newpage
+
+\vspace{2cm}
+\section*{INTRODUCTION}
+\vspace{1cm}
+Etant donné un ensemble $\mathcal{P}$ de points de $\mathbb{R}^d$, le cercle couvrant minimum de $\mathcal{P}$ est le cercle de diamètre le plus petit contenant tous les points de $\mathcal{P}$.\\
+En géométrie algorithmique, il est d'usage de commencer par trouver un algorithme naïf, puis de chercher ensuite une optimisation dans la résolution du problème. C'est la raison pour laquelle nous analyserons l'algorithme naïf dans un premier temps, afin d'identifier les cas qui ralentissent l'algorithme, puis nous allons présenter l'algorithme de Welzl qui permet la résolution du problème en temps linéaire.\\
+
+Nous travaillerons sur un ensemble fini de points dans $\mathbb{R}^2$ pour des raisons de simplicité, mais il existe un problème similaire en $\mathbb{R}^3$ appelé le calcul de la sphère minimum englobante On parle d'hypersphere englobante pour des problèmes en dimension \textit{d} (\textit{d}>3).
+
+\vspace{2cm}
+\section{Definitions et notations}
+
+Nous utiliserons les notations suivantes:
+\begin{itemize}
+\item - soit $\mathcal{P}$ l'ensemble de points de $\mathbb{R}^2$, et \textit{n} le nombre de points dans $\mathcal{P}$;
+\item - soit $\mathcal{C}$ le cercle couvrant minimum de l'ensemble de points $\mathcal{P}$;
+\item - soit  $\delta(A,B)$ la distance euclidienne entre le point $A$ et le point $B$ et $\delta^2(A,B)$ cette même distance euclidienne au carré;
+\end{itemize}
+\smallbreak
+\medbreak
+\medbreak
+Voici les différents concepts mathématiques dont nous aurons besoin au sein de ce projet.\\
+\begin{description}
+  \item[Definition 1] \hfill \\
+Un cercle, défini par son centre \textit{c} ainsi que son rayon \textit{r}, est dit couvrant minimum pour un ensemble de points $\mathcal{P}$ si $\forall \textit{p} \in \mathcal{P}$,  $\delta(\textit{p},\textit{c}) \leqslant \textit{r}$.\\
+  \item[Definition 2] \hfill \\
+Un point \textit{p} de $\mathcal{P}$ est sur le cercle lorsque  $\delta(\textit{p},\textit{c})=\textit{r}$.\\
+  \item[Definition 3] \hfill \\
+Le cercle circonscrit à 3 points est défini par le cercle qui passe par les 3 sommets de ce triangle.\\
+  \item[Definition 4] \hfill \\
+Le centre du cercle circonscrit se définit comme le point d'intersection des médiatrices d'un triangle.\\
+\end{description}
+\medbreak
+\medbreak
+C'est grâce à la \textbf{Definition 4} que nous allons calculer les coordonnées du centre du cercle circonscrit à 3 points. Nous faisons appel à un système à 2 équations correspondant à 2 des 3 médiatrices d'un triangle choisies aléatoirement.\\
+\medbreak
+Soit $E1$ l'équation de la 1\ière{} médiatrice, et $E2$ l'équation de la 2\ième{} médiatrice.
+\begin{center}
+$(E1) : ax_1 + by_1 = c$ \\
+$(E2) : dx_2 + ey_2 = f$ \\
+\end{center}
+Comme le centre du cercle circonscrit est l'intersection des médiatrices, ses coordonnées doivent respecter les 2 équations ci-dessus.\\
+Nous obtenons donc le système d'équation suivant:
+\begin{center}
+$\left \{
+\begin{array}{c @{ = } c}
+    ax + by & c  \hspace{1cm} (1) \\
+    dx + ey & f  \hspace{1cm} (2) \\
+\end{array}
+\right.$
+\end{center}
+En multipliant $(1)$ par $d$ et $(2)$ par $a$, nous obtenons:
+\begin{center}
+$\left \{
+\begin{array}{c @{ = } c}
+    adx + bdy & cd  \hspace{1cm} (1) \\
+    dax + eay & fa  \hspace{1cm} (2) \\
+\end{array}
+\right.$
+\end{center}
+Avec $(1) - (2)$, on obtient:
+\begin{center}
+$\left.
+\begin{array}{c @{ = } c}
+   (adx + bdy) - (dax - eay) & cd - fa \\
+   y (bd - ea) & cd - fa \\
+   y & \frac{cd - fa}{bd - ea} \\
+\end{array}
+\right.$
+\end{center}
+
+De la même manière, en multipliant $(1)$ par $e$ et $(2)$ par $b$, nous obtenons:
+\begin{center}
+$\left \{
+\begin{array}{c @{ = } c}
+    aex + bey & ce  \hspace{1cm} (1) \\
+    dbx + eby & fb  \hspace{1cm} (2) \\
+\end{array}
+\right.$
+\end{center}
+Avec $(1) - (2)$, on obtient:
+\begin{center}
+$\left.
+\begin{array}{c @{ = } c}
+   (aex + bey) - (dbx - eby) & ce - fb \\
+   x (ae - db) & ce - fb \\
+   x & \frac{ce - fb}{ae - db} \\
+\end{array}
+\right.$
+\end{center}
+
+Soit 3 points $A, B, C$ distincts formant un triangle quelconque.\\
+Soit $I$ le milieu du segment $[AB]$ et $J$ le milieu du segment $[BC]$.\\
+Supposons que $(1)$ soit l'équation de la médiatrice de $[AB]$ et $(2)$ soit l'équation de la médiatrice de $[BC]$.\\
+Alors, nous obtenons:
+\begin{center}
+$\left.
+\begin{array}{c @{ = } c}
+   a & B.x - A.x \\
+   b & B.y - A.y \\
+   c & I.x (B.x - A.x) + I.y (B.y - A.y) \\
+   
+   d & C.x - B.x \\
+   e & C.y - B.y \\
+   f & J.x (C.x - B.x) + J.y (C.y - B.y) \\
+\end{array}
+\right.$
+\end{center}
+
+Dans le cas particulier où $ae - db$ (respectivement $bd - ea$) vaut $0$, alors nous renvoyons une coordonnée nulle car cela veut dire que nous avons au moins 2 points avec les mêmes coordonnées.\\
+Même si mathématiquement parlant, cela n'a pas forcément de sens de renvoyer une coordonnée nulle, dans notre cas, nous nous en accommoderons, étant donné que nous supposons que chaque point possède des coordonnées uniques.\\
+\medbreak
+
+En utilisant ces notations, nous pouvons poser les deux lemmes suivants:
+\begin{lem}
+$\forall$ \textit{p},\textit{q} $\in \mathcal{P}$, si le cercle de diamètre \textit{d} = $\delta(\textit{p},\textit{q})$ couvre tout autre point de $\mathcal{P}$, alors ce cercle est un cercle couvrant de rayon minimum.
+\end{lem}
+
+\begin{lem}
+\label{lem1}
+En dimension 2, il existe un unique cercle passant par 3 points non-colinéaires. On parle de cercle circonscrit au triangle formé par ces 3 points.
+\end{lem}
+
+\section{Calcul naïf du cercle couvrant minimum}
+
+L'algorithme naïf est basé sur l'application directe des deux lemmes précédents.
+Nous pouvons séparer cet algorithme en deux phases:\\
+\begin{itemize}
+\item- la première consiste à essayer de trouver un cercle à l'aide de 2 points qui contiendrait donc tous les autres points de $\mathcal{P}$.\\Si un tel cercle existe, alors c'est le cercle couvrant minimum, et l'algorithme retourne ce cercle.\\
+\item- la seconde phase n'intervient que dans le cas où la recherche du cercle couvrant minimum avec 2 points échoue. Dans ce cas, l'algorithme va chercher le cercle couvrant minimum à l'aide de 3 points \textit{p}, \textit{q}, \textit{r} en calculant le cercle circonscrit à ces 3 points dont le centre \textit{c} est tel que $\delta(\textit{c},\textit{p})=\delta(\textit{c},\textit{q})=\delta(\textit{c},\textit{r})$.
+\end{itemize}
+\medbreak
+\vspace{1cm}
+
+\begin{algorithm}
+\textbf{INPUT:} $\mathcal{P}$: la liste des points dans le plan\\
+\textbf{OUTPUT:} $\mathcal{C}$: le cercle couvrant minimum de l'ensemble $\mathcal{P}$\\
+\begin{algorithmic}[1]
+\FOR{\textit{p} $\in$ $\mathcal{P}$}
+	\FOR{\textit{q} $\in$ $\mathcal{P}$, \textit{p} $\neq$ \textit{q}}
+		\STATE{$\mathcal{C} \leftarrow $ cercle de centre \textit{c} = $(\frac{\textit{p}.x+\textit{q}.x}{2}; \frac{\textit{p}.y+\textit{q}.y}{2})$ et de rayon \textit{r} = $\frac{\delta(\textit{p},\textit{q})}{2} $}
+		\IF {$\mathcal{C}$ contient tous les points de $\mathcal{P}$}
+		\RETURN{ $\mathcal{C}$}
+		\ENDIF	
+	\ENDFOR
+\ENDFOR
+\STATE $\mathcal{C}_{min} \leftarrow $ le cercle circonscrit de 3 points de rayon minimum
+\STATE \textit{$r_{min}$} $\leftarrow$ le rayon du cercle $\mathcal{C}_{min}$
+\FOR{\textit{p} $\in$ $\mathcal{P}$}
+	\FOR{\textit{q} $\in$ $\mathcal{P}$, \textit{p} $\neq$ \textit{q}}
+		\FOR{\textit{r} $\in$ $\mathcal{P}$, \textit{p} $\neq$ \textit{r}, \textit{q} $\neq$ \textit{r}}
+			\STATE{$\mathcal{C} \leftarrow $ cercle de centre \textit{c} = $(\frac{\textit{p}.x+\textit{q}.x}{2}; \frac{\textit{p}.y+\textit{q}.y}{2})$ et de rayon \textit{r} = $\frac{\delta(\textit{p},\textit{q})}{2} $}
+			\IF {$\mathcal{C}$ contient tous les points de $\mathcal{P}$}
+				\IF {$\mathcal{C}$.\textit{r} < \textit{$r_{min}$}}
+					\STATE $\mathcal{C}_{min} \leftarrow \mathcal{C}$
+					\STATE \textit{$r_{min}$} $\leftarrow$ $\mathcal{C}$.\textit{r}
+				\ENDIF
+			\ENDIF	
+		\ENDFOR
+	\ENDFOR
+\ENDFOR
+\RETURN{ $\mathcal{C}$}
+\end{algorithmic}
+\caption{Algorithme naïf du calcul du cercle couvrant minimum}
+\label{algoNaïf}
+\end{algorithm}
+
+
+\begin{algorithm}
+\textbf{INPUT:}  $\mathcal{C}$: un cercle quelconque de centre \textit{c} et de rayon \textit{r}, $\mathcal{P}$: la liste des points dans le plan\\
+\textbf{OUTPUT:} TRUE or FALSE\\
+\begin{algorithmic}[1]
+\FOR{\textit{p} $\in$ $\mathcal{P}$}
+	\IF {$\delta(\textit{p},\textit{c}) > \textit{r}$}
+		\RETURN FALSE
+	\ENDIF
+\ENDFOR
+\RETURN TRUE
+\end{algorithmic}
+\caption{Fonction Contient}
+\end{algorithm}
+
+Pour tester si le cercle contient tous les points d'un ensemble donné, nous faisons appel à la fonction "Contient" ci-dessous.\\
+
+L'algorithme 1 cherche, dans un premier temps, toutes les paires de points possibles de manière à ce qu'elles puissent former le diamètre du cercle: il y a donc en tout $\frac{\textit{n}(\textit{n}-1)}{2}$ combinaisons possibles.
+
+Puis, si cette recherche échoue, on considère tous les triplets de points possibles de manière à calculer le cercle circonscrit à ces 3 points: il y a donc en tout $\frac{\textit{n}(\textit{n}-1)(\textit{n}-2)}{6}$ combinaisons possibles.
+
+La fonction "Contient" utilisé dans l'algorithme 1 aux lignes 4 et 15 parcourt toute la liste si tous les points sont contenus dans le cercle.\\
+
+Ainsi, la compléxité de l'algorithme naïf est en $\mathcal{O}(n^4)$, ce qui en fait un algorithme très peu performant.
+
+\vspace{1cm}
+\section{Calcul du cercle couvrant minimum - Algorithme de Welzl}
+\vspace{1cm}
+En 1991, Welzl a proposé un algorithme qui a l'avantage d'avoir une complexité en $\mathcal{O}(n)$. D'après le \textbf{lemme \ref{lem1}}, il existe un unique cercle passant par 3 points non-colinéraires.\\
+\smallbreak
+Nous pouvons donc ne considérer que les cas où nous avons 1, 2 ou 3 points situés exactement sur le cercle, car dans tous les autres cas, le cercle circonscrit à 3 points suffit pour trouver le cercle passant par tous les autres points.\\
+C'est la raison pour laquelle nous utilisons un tableau de 3 points que nous appelons \textit{boundary}, qui correspond aux points situés sur le cercle, c'est-à-dire les points dont la distance $\delta(x,c) = \mathcal{C}.\textit{rayon}$ pour un cercle $\mathcal{C}$ donné de centre \textit{c} et de rayon \textit{rayon}, et $x$ appartenant au tableau \textit{boundary}.\\
+
+Il s'agit d'un algorithme récursif dont le pseudo-code est présenté ci-dessous.
+
+\subsection{Principe de l'algorithme}
+Notre algorithme consiste à construire un cercle couvrant à chaque appel récursif en fonction du nombre de points stockés dans le tableau \textit{boundary}, puis à regarder s'il existe des points qui ne sont pas contenus dans ce cercle en considérant tous les points $\mathcal{P}$ jusqu'à l'indice courant.\\
+Si un tel point existe, alors on l'ajoute dans le tableau \textit{boundary} puis on rappelle la fonction de manière récursive, en augmentant la taille du tableau \textit{boundary} de $1$.\\
+Sinon, on ne fait rien car cela veut dire que le point considéré est déjà situé dans le cercle.\\
+\smallbreak
+A chaque appel à la fonction récursive \textit{b\_minidisk()}, nous construisons un cercle passant par 1, 2 ou 3 points grâce à la fonction \textit{buildMinidisk()}. Lors du parcours de l'ensemble de points $\mathcal{P}$, nous regardons tous les points qu'on a déjà traité, jusqu'à l'index du point courant.\\
+Ainsi, tous les points déjà traités sont nécessairement situés dans ou sur le cercle courant car ce même cercle a été créé à l'aide du tableau \textit{boundary} qu'on met à jour avant chaque appel récursif.\\
+De ce fait, à première vue on pourrait penser qu'il peut y avoir dans le pire des cas un appel récursif pour chaque élément de la liste de points $\mathcal{P}$, et ce $n(n-1)...1 = n!$ fois.\\
+Or l'appel récursif ne se déclenche que lorsque l'on trouve un point qui n'est pas contenu dans le cercle courant, qui est censé contenir tous les points jusqu'à l'indice courant dans la liste $\mathcal{P}$ (qui correspond donc à l'argument \textit{index} dans l'algorithme).\\
+\smallbreak
+La \textsc{FIGURE 1} illustre à un instant donné la mise à jour du cercle couvrant minimum.
+Donc nous pouvons en conclure que l'algorithme possède bien une complexité en $\mathcal{O}(n)$.\\
+
+\begin{figure}
+\includegraphics{welzl.jpg}
+\caption{Mise à jour du cercle couvrant minimum courant à l'itération i}
+\medbreak
+\emph{Nous pouvons observer sur l'image suivante que lorsque l'on traite un point qui est situé à l'extérieur du cercle courant, alors le cercle couvrant est mis à jour, et contient nécessairement tous les points que l'on a déjà traité.}
+\end{figure}
+
+\newpage
+
+\begin{algorithm}
+\textbf{INPUT:}  $\mathcal{P}$: la liste des points dans le plan\\
+\textbf{OUTPUT:} $\mathcal{C}$: le cercle couvrant minimum de l'ensemble $\mathcal{P}$\\
+\begin{algorithmic}[1]
+\STATE $\mathcal{C} \leftarrow$ \textit{b\_minidisk}($\mathcal{P}$, $\mathcal{P}$.\textit{size}, $\mathcal{L}$ = [ ], 0)\\
+\RETURN $\mathcal{C}$\\
+\end{algorithmic}
+\caption{Algorithme de Welzl}
+\end{algorithm}
+
+\begin{algorithm}
+\textbf{INPUT:} \\ $\mathcal{P}$: la liste des points dans le plan,\\ \textit{index}: l'index jusqu'où on effectue la récursion, $\mathcal{P}$,\\ \textit{boundary}: le tableau des points situés sur le cercle,\\ \textit{b}: le nombre de points situés sur le cercle\\
+\textbf{OUTPUT:} $\mathcal{C}$ le cercle couvrant minimum de l'ensemble $\mathcal{P}$\\
+\begin{algorithmic}[1]
+\STATE $\mathcal{C} \leftarrow$ \textit{buildMinidisk}(\textit{boundary}, \textit{b})\\
+\FOR{\textit{i} = 0 \TO \textit{i} = \textit{index}-1 }
+	\STATE $\textit{p} \leftarrow \mathcal{P}[\textit{i}]$
+	\IF {$\mathcal{C}$ ne contient pas \textit{p} \AND \textit{b} < 3}
+		\STATE \textit{boundary}[\textit{b}] = \textit{p}
+		\STATE $\mathcal{C} \leftarrow$ \textit{b\_minidisk}($\mathcal{P}$, \textit{i}, \textit{boundary}, \textit{b}+1)\\
+	\ENDIF
+\ENDFOR
+
+\RETURN $\mathcal{C}$\\
+\end{algorithmic}
+\caption{b\_minidisk()}
+\end{algorithm}
+
+\begin{algorithm}
+\textbf{INPUT:} \\ \textit{boundary}: le tableau des points situés sur le cercle,\\ \textit{b}: le nombre de points situés sur le cercle\\
+\textbf{OUTPUT:} $\mathcal{C}$ le cercle couvrant minimum des points dans \textit{boundary}\\
+\begin{algorithmic}[1]
+\STATE $\mathcal{C} \leftarrow$ cercle de centre $(0;0)$ et de rayon 0\\
+\IF {\textit{b} = 1}
+	\STATE $\mathcal{C} \leftarrow$ cercle de centre \textit{boundary}[0] et de rayon 0\\
+\ELSIF {\textit{b} = 2}
+	\STATE{$\mathcal{C} \leftarrow $ cercle de centre \textit{c} = $(\frac{\textit{p}.x+\textit{q}.x}{2}; \frac{\textit{p}.y+\textit{q}.y}{2})$ et de rayon \textit{r} = $\frac{\delta(\textit{p},\textit{q})}{2} $}
+\ELSIF {\textit{b} = 3}
+	\STATE{$\mathcal{C} \leftarrow$ cercle circonscrit aux points \textit{boundary}[0], \textit{boundary}[1], \textit{boundary}[2]\\}
+\ENDIF
+\end{algorithmic}
+\caption{buildMinidisk()}
+\end{algorithm}
+
+\newpage
+
+\vspace{1cm}
+\section{Résultats expérimentaux}
+\vspace{1cm}
+Une base de test nous a été fournie pour pouvoir tester nos algorithmes: elle contient 1664 instances de test, chacune d'entre elle contenant 256 lignes, et chaque ligne représentant les coordonnées d'un point dans un plan en 2D.
+
+Le tableau en annexe montre les résultats expérimentaux des deux algorithmes présentés, le naïf et celui de Welzl, pour les 100 premières instances de test.\\
+La colonne de gauche concerne les résultats pour l'algorithme naïf, et la colonne de droite ceux de l'algorithme de Welzl.\\
+La colonne rayon représente le rayon du cercle couvrant minimum de l'instance n°i, arrondi à l'entier supérieur.\\
+Nous observons que la différence entre les rayons trouvés avec l'algorithme naïf et ceux trouvés avec l'algorithme de Welzl est nulle pour les 100 premières instances.\\
+Le fichier tableFormat.txt fourni avec le code source montre que l'on retrouve la même caractéristique sur les autres instances. 
+
+D'autre part, nous constatons également que la comparaison des coordonnées du centre de chaque cercle couvrant minimum de chaque instance est identique pour les 2 algorithmes (voir.\\
+
+Nous pouvons donc conclure que nos 2 algorithmes trouvent le même résultat, à savoir le même cercle couvrant minimum pour toutes les instances données de la base de test.
+
+
+\vspace{1cm}
+\section{Discussions}
+\vspace{1cm}
+
+\begin{figure}
+\includegraphics{welzl_naif2.png}
+\caption{Comparaison du temps d'exécution entre l'algorithme naïf (en bleu) et l'algorithme de Welzl (en rouge)}
+\medbreak
+\end{figure}
+
+Les résultats expérimentaux nous permettent de constater une énorme différence en terme de temps d'exécution entre l'algorithme naïf et l'algorithme de Welzl, ce qui est logique lorsque l'on compare les complexités de chacun de ces algorithmes ($\mathcal{O}(n^4)$ vs. $\mathcal{O}(n)$).
+
+Il peut arriver que l'algorithme naïf soit aussi efficace au niveau du temps d'exécution que l'algorithme de Welzl, lorsque le cercle couvrant minimum est trouvé directement à l'aide de 2 points. Dans cette configuration, ce cercle est retourné au pire cas en temps polynomial $\mathcal{O}(n^2)$, et donc face à une instance qui ne contient que 256 points, le temps d'exécution avec les machines d'aujourd'hui diffère de très peu.\\
+
+Cependant, en considérant des instances avec un nombre de points plus élevé, la différence entre les temps d'exécution risque dans ce cas de se faire sentir. Il serait alors plus judicieux d'utiliser un algorithme comme celui de Welzl.
+
+Avec l'algorithme de Welzl, la meilleure situation correspondrait au fait que le cercle couvrant minimum soit trouvé directement à l'aide des 2 premiers points de la liste $\mathcal{P}$, auquel cas il n'y aurait aucun appel récursif. Au contraire, la pire configuration serait qu'on ferait un appel récursif à chaque parcourt de l'ensemble $\mathcal{P}$, ce qui permet de trouver le cercle en faisant au pire $n$ appel récursif.
+
+Il s'agit donc d'un excellent résultat, et c'est, probablement à l'heure actuelle, la meilleure technique connue pour résoudre le problème du cercle couvrant minimum. Pour faire mieux, il faudrait trouver un algorithme qui trouve un tel cercle en temps logarithmique, ce qui implique de ne considérer qu'un ensemble qui diminue à chaque itération, sans avoir à parcourir toute la liste, ce qui relève donc de l'impossible.
+
+\vspace{1cm}
+\section{Conclusion}
+\vspace{1cm}
+Ce projet avait pour but de comparer à quel point l'efficacité en terme de temps d'exécution entre l'algorithme naïf et celui de Welzl pouvait varier, tout en ayant la certitude d'obtenir les mêmes résultats dans les 2 cas.
+
+Nous avons, d'une part, l'algorithme naïf dont la complexité est en $\mathcal{O}(n^4)$, ce qui est passablement horrible, et d'autre part, l'algorithme de Welzl qui possède lui une complexité linéaire en seulement $\mathcal{O}(n)$.\\
+
+Nous pouvons constater que notre algorithme de Welzl rend effectivement les mêmes résultats que ceux de l'algorithme naïf, ce qui permet d'en valider son implémentation.\\
+
+L'efficacité des 2 algorithmes a été discutée dans la section précédente (\textbf{Discussions}), et il apparaît clair qu'aujourd'hui, un algorithme tel que celui de Welzl, ayant une complexité linéaire, est sans doute le plus efficace en terme de temps d'exécution pour résoudre le problème du cercle couvrant minimum.
+
+
+\newpage
+
+\begin{table}[h!]
+\begin{minipage}[t]{.2\linewidth}
+    \begin{tabular}{| c || c | c || c | c |}
+    \hline
+     & \multicolumn{2}{|c|}{Algorithme Naïf} &  \multicolumn{2}{|c|}{Algorithme de Welzl} \\ \hline
+    \hline
+    instance n° & Temps d'exécution (ms) & rayon & Temps d'exécution (ms) & rayon \\ \hline
+          1 & 1111 & 197 & 272 & 197 \\ \hline
+     2 & 788 & 197 & 1 & 197 \\ \hline
+     3 & 799 & 198 & 1 & 198 \\ \hline
+     4 & 820 & 199 & 1 & 199 \\ \hline
+     5 & 765 & 197 & 1 & 197 \\ \hline
+     6 & 711 & 198 & 0 & 198 \\ \hline
+     7 & 611 & 198 & 1 & 198 \\ \hline
+     8 & 604 & 199 & 0 & 199 \\ \hline
+     9 & 786 & 197 & 0 & 197 \\ \hline
+     10 & 712 & 198 & 0 & 198 \\ \hline
+     11 & 701 & 197 & 1 & 197 \\ \hline
+     12 & 780 & 196 & 0 & 196 \\ \hline
+     13 & 649 & 196 & 0 & 196 \\ \hline
+     14 & 636 & 199 & 1 & 199 \\ \hline
+     15 & 646 & 198 & 0 & 198 \\ \hline
+     16 & 903 & 199 & 0 & 199 \\ \hline
+     17 & 836 & 197 & 1 & 197 \\ \hline
+     18 & 766 & 197 & 0 & 197 \\ \hline
+     19 & 615 & 198 & 2 & 198 \\ \hline
+     20 & 728 & 196 & 0 & 196 \\ \hline
+     21 & 830 & 197 & 1 & 197 \\ \hline
+     22 & 724 & 198 & 0 & 198 \\ \hline
+     23 & 748 & 195 & 0 & 195 \\ \hline
+     24 & 819 & 199 & 1 & 199 \\ \hline
+     25 & 837 & 199 & 0 & 199 \\ \hline
+     26 & 600 & 197 & 0 & 197 \\ \hline
+     27 & 711 & 198 & 1 & 198 \\ \hline
+     28 & 639 & 199 & 0 & 199 \\ \hline
+     29 & 897 & 197 & 1 & 197 \\ \hline
+     30 & 868 & 197 & 0 & 197 \\ \hline
+     31 & 793 & 198 & 0 & 198 \\ \hline
+     32 & 590 & 198 & 1 & 198 \\ \hline
+     33 & 781 & 197 & 0 & 197 \\ \hline
+     34 & 836 & 196 & 0 & 196 \\ \hline
+     35 & 712 & 199 & 1 & 199 \\ \hline
+     36 & 759 & 197 & 0 & 197 \\ \hline
+     37 & 795 & 198 & 1 & 198 \\ \hline
+     38 & 628 & 198 & 0 & 198 \\ \hline
+     39 & 873 & 199 & 0 & 199 \\ \hline
+     40 & 656 & 198 & 1 & 198 \\ \hline
+     41 & 0 & 198 & 0 & 198 \\ \hline
+     42 & 736 & 197 & 1 & 197 \\ \hline
+     43 & 683 & 196 & 0 & 196 \\ \hline
+     44 & 671 & 199 & 1 & 199 \\ \hline
+     45 & 658 & 196 & 0 & 196 \\ \hline
+     46 & 774 & 193 & 1 & 193 \\ \hline
+     47 & 827 & 198 & 0 & 198 \\ \hline
+     48 & 592 & 199 & 0 & 199 \\ \hline
+     49 & 809 & 196 & 1 & 196 \\ \hline
+     50 & 623 & 199 & 0 & 199 \\ \hline
+     \hline
+    \end{tabular}
+\end{minipage}
+\hfill
+\end{table}
+
+
+
+
+
+\begin{table}[h!]
+\begin{minipage}[t]{.2\linewidth}
+    \begin{tabular}{| c || c | c || c | c |}
+    \hline
+     & \multicolumn{2}{|c|}{Algorithme Naïf} &  \multicolumn{2}{|c|}{Algorithme de Welzl} \\ \hline
+    \hline
+    instance n° & Temps d'exécution (ms) & rayon & Temps d'exécution (ms) & rayon \\ \hline
+51 & 702 & 197 & 1 & 197 \\ \hline
+     52 & 755 & 200 & 0 & 200 \\ \hline
+     53 & 602 & 198 & 0 & 198 \\ \hline
+     54 & 692 & 200 & 1 & 200 \\ \hline
+     55 & 681 & 199 & 2 & 199 \\ \hline
+     56 & 661 & 198 & 1 & 198 \\ \hline
+     57 & 756 & 196 & 0 & 196 \\ \hline
+     58 & 825 & 199 & 0 & 199 \\ \hline
+     59 & 831 & 197 & 1 & 197 \\ \hline
+     60 & 836 & 198 & 0 & 198 \\ \hline
+     61 & 758 & 196 & 0 & 196 \\ \hline
+     62 & 814 & 196 & 0 & 196 \\ \hline
+     63 & 747 & 199 & 1 & 199 \\ \hline
+     64 & 771 & 199 & 0 & 199 \\ \hline
+     65 & 684 & 196 & 0 & 196 \\ \hline
+     66 & 0 & 198 & 1 & 198 \\ \hline
+     67 & 798 & 192 & 0 & 192 \\ \hline
+     68 & 638 & 197 & 0 & 197 \\ \hline
+     69 & 838 & 197 & 0 & 197 \\ \hline
+     70 & 760 & 198 & 1 & 198 \\ \hline
+     71 & 796 & 198 & 0 & 198 \\ \hline
+     72 & 787 & 200 & 0 & 200 \\ \hline
+     73 & 599 & 197 & 0 & 197 \\ \hline
+     74 & 900 & 199 & 1 & 199 \\ \hline
+     75 & 601 & 194 & 0 & 194 \\ \hline
+     76 & 629 & 198 & 0 & 198 \\ \hline
+     77 & 931 & 199 & 1 & 199 \\ \hline
+     78 & 753 & 198 & 0 & 198 \\ \hline
+     79 & 676 & 200 & 0 & 200 \\ \hline
+     80 & 714 & 198 & 1 & 198 \\ \hline
+     81 & 635 & 198 & 0 & 198 \\ \hline
+     82 & 850 & 197 & 0 & 197 \\ \hline
+     83 & 814 & 194 & 0 & 194 \\ \hline
+     84 & 722 & 195 & 0 & 195 \\ \hline
+     85 & 803 & 198 & 0 & 198 \\ \hline
+     86 & 682 & 198 & 1 & 198 \\ \hline
+     87 & 643 & 198 & 0 & 198 \\ \hline
+     88 & 594 & 198 & 0 & 198 \\ \hline
+     89 & 679 & 195 & 0 & 195 \\ \hline
+     90 & 580 & 199 & 1 & 199 \\ \hline
+     91 & 790 & 198 & 0 & 198 \\ \hline
+     92 & 668 & 194 & 0 & 194 \\ \hline
+     93 & 686 & 195 & 1 & 195 \\ \hline
+     94 & 720 & 198 & 1 & 198 \\ \hline
+     95 & 865 & 199 & 0 & 199 \\ \hline
+     96 & 902 & 197 & 0 & 197 \\ \hline
+     97 & 677 & 199 & 0 & 199 \\ \hline
+     98 & 728 & 199 & 1 & 199 \\ \hline
+     99 & 679 & 199 & 0 & 199 \\ \hline
+     100 & 734 & 194 & 0 & 194 \\ \hline
+    \hline
+    \end{tabular}
+\end{minipage}
+\caption{Tableau des 100 premières instances}
+\end{table}
+
+\begin{table}[h!]
+\begin{minipage}[t]{.3\linewidth}
+    \begin{tabular}{|c|c|c|}
+    \hline
+   instance n° & Naïf & Welzl \\
+   \hline
+     1 & [398;301] & [398;301] \\ \hline
+     2 & [398;301] & [398;301] \\ \hline
+     3 & [400;299] & [400;299] \\ \hline
+     4 & [397;301] & [397;301] \\ \hline
+     5 & [396;299] & [396;299] \\ \hline
+     6 & [403;298] & [403;298] \\ \hline
+     7 & [401;298] & [401;298] \\ \hline
+     8 & [399;299] & [399;299] \\ \hline
+     9 & [400;299] & [400;299] \\ \hline
+     10 & [398;300] & [398;300] \\ \hline
+     11 & [396;298] & [396;298] \\ \hline
+     12 & [400;304] & [400;304] \\ \hline
+     13 & [397;300] & [397;300] \\ \hline
+     14 & [395;301] & [395;301] \\ \hline
+     15 & [400;301] & [400;301] \\ \hline
+     16 & [398;303] & [398;303] \\ \hline
+     17 & [401;300] & [401;300] \\ \hline
+     18 & [398;306] & [398;306] \\ \hline
+     19 & [399;300] & [399;300] \\ \hline
+     20 & [399;296] & [399;296] \\ \hline
+     21 & [397;299] & [397;299] \\ \hline
+     22 & [400;301] & [400;301] \\ \hline
+     23 & [394;303] & [394;303] \\ \hline
+     24 & [398;299] & [398;299] \\ \hline
+     25 & [401;300] & [401;300] \\ \hline
+     26 & [402;296] & [402;296] \\ \hline
+     27 & [399;302] & [399;302] \\ \hline
+     28 & [400;299] & [400;299] \\ \hline
+     29 & [398;295] & [398;295] \\ \hline
+     30 & [398;300] & [398;300] \\ \hline
+     31 & [397;301] & [397;301] \\ \hline
+     32 & [399;301] & [399;301] \\ \hline
+     33 & [400;297] & [400;297] \\ \hline
+     34 & [399;296] & [399;296] \\ \hline
+     35 & [397;302] & [397;302] \\ \hline
+     36 & [400;301] & [400;301] \\ \hline
+     37 & [398;300] & [398;300] \\ \hline
+     38 & [398;299] & [398;299] \\ \hline
+     39 & [398;300] & [398;300] \\ \hline
+     40 & [399;299] & [399;299] \\ \hline
+     41 & [397;299] & [397;299] \\ \hline
+     42 & [397;297] & [397;297] \\ \hline
+     43 & [401;303] & [401;303] \\ \hline
+     44 & [401;300] & [401;300] \\ \hline
+     45 & [394;302] & [394;302] \\ \hline
+     46 & [391;310] & [391;310] \\ \hline
+     47 & [397;298] & [397;298] \\ \hline
+     48 & [400;300] & [400;300] \\ \hline
+     49 & [395;300] & [395;300] \\ \hline
+     50 & [398;298] & [398;298] \\ \hline
+    \hline
+    \end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.3\linewidth}
+    \begin{tabular}{|c|c|c|}
+    \hline
+   instance n° & Naïf & Welzl \\
+   \hline
+         51 & [400;297] & [400;297] \\ \hline
+     52 & [399;300] & [399;300] \\ \hline
+     53 & [399;298] & [399;298] \\ \hline
+     54 & [400;299] & [400;299] \\ \hline
+     55 & [398;299] & [398;299] \\ \hline
+     56 & [401;299] & [401;299] \\ \hline
+     57 & [401;301] & [401;301] \\ \hline
+     58 & [396;299] & [396;299] \\ \hline
+     59 & [402;303] & [402;303] \\ \hline
+     60 & [398;300] & [398;300] \\ \hline
+     61 & [397;303] & [397;303] \\ \hline
+     62 & [400;300] & [400;300] \\ \hline
+     63 & [395;302] & [395;302] \\ \hline
+     64 & [399;298] & [399;298] \\ \hline
+     65 & [402;300] & [402;300] \\ \hline
+     66 & [401;299] & [401;299] \\ \hline
+     67 & [398;305] & [398;305] \\ \hline
+     68 & [399;297] & [399;297] \\ \hline
+     69 & [395;299] & [395;299] \\ \hline
+     70 & [396;299] & [396;299] \\ \hline
+     71 & [400;300] & [400;300] \\ \hline
+     72 & [399;299] & [399;299] \\ \hline
+     73 & [402;299] & [402;299] \\ \hline
+     74 & [399;299] & [399;299] \\ \hline
+     75 & [396;300] & [396;300] \\ \hline
+     76 & [396;300] & [396;300] \\ \hline
+     77 & [397;300] & [397;300] \\ \hline
+     78 & [399;300] & [399;300] \\ \hline
+     79 & [399;300] & [399;300] \\ \hline
+     80 & [401;301] & [401;301] \\ \hline
+     81 & [399;301] & [399;301] \\ \hline
+     82 & [393;302] & [393;302] \\ \hline
+     83 & [400;295] & [400;295] \\ \hline
+     84 & [398;297] & [398;297] \\ \hline
+     85 & [396;301] & [396;301] \\ \hline
+     86 & [400;300] & [400;300] \\ \hline
+     87 & [403;299] & [403;299] \\ \hline
+     88 & [401;300] & [401;300] \\ \hline
+     89 & [403;302] & [403;302] \\ \hline
+     90 & [399;299] & [399;299] \\ \hline
+     91 & [402;300] & [402;300] \\ \hline
+     92 & [402;298] & [402;298] \\ \hline
+     93 & [400;300] & [400;300] \\ \hline
+     94 & [398;299] & [398;299] \\ \hline
+     95 & [400;300] & [400;300] \\ \hline
+     96 & [399;302] & [399;302] \\ \hline
+     97 & [401;300] & [401;300] \\ \hline
+     98 & [400;300] & [400;300] \\ \hline
+     99 & [400;300] & [400;300] \\ \hline
+     100 & [397;297] & [397;297] \\ \hline
+    \hline
+    \end{tabular}
+\end{minipage}
+\caption{Tableau des 100 premières instances correspondant aux coordonnées du centre du cercle couvrant minimum pour chaque instance}
+\end{table}
+
+
+
+\end{document}  
